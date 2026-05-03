@@ -81,13 +81,13 @@ docker compose down
 ### 1. Подключиться к серверу
 
 ```bash
-ssh root@144.31.48.183
+ssh root@YOUR_SERVER_IP
 ```
 
 Если используется другой пользователь:
 
 ```bash
-ssh username@144.31.48.183
+ssh username@YOUR_SERVER_IP
 ```
 
 ### 2. Обновить систему
@@ -155,7 +155,7 @@ curl -I http://127.0.0.1:8000/
 Снаружи:
 
 ```text
-http://144.31.48.183:8000/
+http://YOUR_SERVER_IP:8000/
 ```
 
 ### 7. Открыть порт
