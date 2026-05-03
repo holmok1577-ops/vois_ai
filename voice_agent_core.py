@@ -509,66 +509,52 @@ class YandexLLM:
             "Authorization": f"Api-Key {self.api_key}",
             "Content-Type": "application/json"
         }
-        
-        data = {
-            "model": "general",
-            "instruction_text": "Ты полезный голосовой ассистент.",
-            "request_text": prompt,
-            "folder_id": self.folder_id
-        }
-        
+
         # Type checking to satisfy Pylance
         if self.session is None:
             logger.error("HTTP сессия не инициализирована")
             return "Извините, произошла ошибка при обработке запроса."
         
         try:
-            async with self.session.post(self.llm_url, json=data, headers=headers) as response:
+            fm_url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+            fm_payload = {
+                "modelUri": f"gpt://{self.folder_id}/yandexgpt-lite",
+                "completionOptions": {
+                    "stream": False,
+                    "temperature": 0.3,
+                    "maxTokens": 2000
+                },
+                "messages": self._build_messages(prompt)
+            }
+            logger.info(f"LLM history messages: {len(self.history)}")
+            async with self.session.post(fm_url, json=fm_payload, headers=headers) as response:
                 if response.status == 200:
                     result = await response.json()
-                    if "result" in result:
+                    try:
                         answer = result["result"]["alternatives"][0]["message"]["text"]
                         self._remember(prompt, answer)
                         return answer
-                    else:
-                        logger.error(f"LLM ошибка: {result}")
+                    except Exception:
+                        logger.error(f"LLM FM ответ в неожиданном формате: {result}")
                         return "Извините, я не могу ответить на этот вопрос."
-                elif response.status == 404:
-                    # Фолбэк на Foundation Models API
-                    fm_url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-                    fm_payload = {
-                        "modelUri": f"gpt://{self.folder_id}/yandexgpt-lite",
-                        "completionOptions": {
-                            "stream": False,
-                            "temperature": 0.3,
-                            "maxTokens": 2000
-                        },
-                        "messages": self._build_messages(prompt)
-                    }
-                    async with self.session.post(fm_url, json=fm_payload, headers=headers) as fm_resp:
-                        if fm_resp.status == 200:
-                            fm_res = await fm_resp.json()
-                            try:
-                                answer = fm_res["result"]["alternatives"][0]["message"]["text"]
-                                self._remember(prompt, answer)
-                                return answer
-                            except Exception:
-                                logger.error(f"LLM FM ответ в неожиданном формате: {fm_res}")
-                                return "Извините, я не могу ответить на этот вопрос."
-                        else:
-                            fm_text = await fm_resp.text()
-                            logger.error(f"LLM FM HTTP ошибка {fm_resp.status}: {fm_text}")
-                            return "Извините, произошла ошибка при обработке запроса."
-                else:
-                    error_text = await response.text()
-                    logger.error(f"LLM HTTP ошибка {response.status}: {error_text}")
-                    return "Извините, произошла ошибка при обработке запроса."
+
+                error_text = await response.text()
+                logger.error(f"LLM FM HTTP ошибка {response.status}: {error_text}")
+                return "Извините, произошла ошибка при обработке запроса."
         except Exception as e:
             logger.error(f"LLM ошибка: {e}")
             return "Извините, произошла ошибка при обработке запроса."
 
     def _build_messages(self, prompt: str) -> list[dict[str, str]]:
-        messages = [{"role": "system", "text": "Ты полезный голосовой ассистент. Отвечай кратко и по делу, сохраняя контекст разговора."}]
+        messages = [{
+            "role": "system",
+            "text": (
+                "Ты полезный голосовой ассистент. Отвечай кратко и по делу. "
+                "У тебя есть история текущего разговора в предыдущих сообщениях. "
+                "Если пользователь спрашивает, что он спрашивал раньше или о чем был предыдущий вопрос, "
+                "используй историю и отвечай конкретно, не говори, что не помнишь."
+            )
+        }]
         messages.extend(self.history[-self.max_history_messages:])
         messages.append({"role": "user", "text": prompt})
         return messages
