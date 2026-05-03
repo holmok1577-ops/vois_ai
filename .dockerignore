@@ -1,0 +1,17 @@
+.env
+.venv/
+new-env/
+venv/
+env/
+.cloudapi/
+__pycache__/
+*.py[cod]
+*.log
+ffcache*
+cf-quick.yml
+.git/
+.gitignore
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

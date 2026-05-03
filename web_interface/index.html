@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta name="app-version" content="voice-latency-2026-05-03-1">
+    <title>Голосовой помощник</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.recording {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .button-container {
+            margin: 30px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            color: white;
+            font-size: 3em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .mic-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .mic-button.recording {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            animation: pulse-ring 1.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(245, 87, 108, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 20px rgba(245, 87, 108, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(245, 87, 108, 0);
+            }
+        }
+
+        .response-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            min-height: 100px;
+            text-align: left;
+        }
+
+        .response-container h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .response-text {
+            color: #666;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .transcription {
+            color: #999;
+            font-style: italic;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .audio-visualizer {
+            width: 100%;
+            height: 60px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .bar {
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+            transition: height 0.1s;
+        }
+
+        .text-input-container {
+            margin: 20px 0;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Голосовой помощник</h1>
+        <p class="subtitle">Говорите с AI-ассистентом в реальном времени</p>
+
+        <div id="status" class="status">Подключение...</div>
+
+        <div class="button-container">
+            <button id="connectBtn" onclick="connect()">Подключиться</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Отключиться</button>
+        </div>
+
+        <button class="mic-button" id="micButton" onclick="toggleRecording()" disabled>
+            🎤
+        </button>
+
+        <div class="audio-visualizer" id="visualizer"></div>
+
+        <div class="text-input-container">
+            <input type="text" class="text-input" id="textInput" placeholder="Или введите текст сообщения..." disabled>
+            <button onclick="sendText()" id="sendTextBtn" disabled>Отправить текст</button>
+        </div>
+
+        <div class="response-container">
+            <h3>Ответ помощника:</h3>
+            <div id="transcription" class="transcription" style="display: none;"></div>
+            <div id="response" class="response-text">Ожидание запроса...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationFrameId = null;
+        let clientId = 'client_' + Math.random().toString(36).substr(2, 9);
+        let currentAudioChunks = [];
+        let sourceNode = null;
+        let processorNode = null;
+        let pcmStreaming = true; // переходим на прямой PCM стрим
+        let localVoiceStarted = false;
+        let localSilenceStartedAt = null;
+        let recordingStartedAt = 0;
+        let utteranceFinalizing = false;
+        let assistantSpeaking = false;
+        let activeAudioSources = [];
+        let audioPlaybackQueue = [];
+        let audioPlaybackBusy = false;
+        const localVoiceThreshold = 0.012;
+        const localSilenceThreshold = 0.008;
+        const autoStopSilenceMs = 220;
+
+        // Инициализация визуализатора
+        function initVisualizer() {
+            const visualizer = document.getElementById('visualizer');
+            visualizer.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = '10px';
+                visualizer.appendChild(bar);
+            }
+        }
+
+        function updateVisualizer() {
+            if (!analyser || !isRecording) {
+                const bars = document.querySelectorAll('.bar');
+                bars.forEach(bar => bar.style.height = '10px');
+                return;
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            if (!dataArray) {
+                dataArray = new Uint8Array(bufferLength);
+            }
+
+            analyser.getByteFrequencyData(dataArray);
+
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach((bar, i) => {
+                const value = dataArray[i % bufferLength];
+                const height = (value / 255) * 60 + 10;
+                bar.style.height = height + 'px';
+            });
+
+            animationFrameId = requestAnimationFrame(updateVisualizer);
+        }
+
+        async function connect() {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/${clientId}`;
+                
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    updateStatus('connected', 'Подключено');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    document.getElementById('micButton').disabled = false;
+                    document.getElementById('textInput').disabled = false;
+                    document.getElementById('sendTextBtn').disabled = false;
+                };
+
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    handleMessage(message);
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('disconnected', 'Ошибка подключения');
+                };
+
+                ws.onclose = () => {
+                    updateStatus('disconnected', 'Отключено');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    document.getElementById('micButton').disabled = true;
+                    document.getElementById('textInput').disabled = true;
+                    document.getElementById('sendTextBtn').disabled = true;
+                    stopRecording();
+                };
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus('disconnected', 'Ошибка: ' + error.message);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            stopRecording();
+        }
+
+        function updateStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = 'status ' + type;
+            status.textContent = message;
+        }
+
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
+                });
+
+                // Создаем AudioContext и анализатор
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                sourceNode = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                sourceNode.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                // Включаем прямой PCM поток: ScriptProcessor 4096 фреймов
+                const bufferSize = 2048;
+                const inputSampleRate = audioContext.sampleRate; // обычно 44100/48000
+                processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                processorNode.onaudioprocess = (e) => {
+                    if (!isRecording || !ws || ws.readyState !== WebSocket.OPEN) return;
+                    const input = e.inputBuffer.getChannelData(0);
+                    const rms = calculateRms(input);
+                    const now = performance.now();
+                    if (rms >= localVoiceThreshold) {
+                        localVoiceStarted = true;
+                        localSilenceStartedAt = null;
+                    } else if (localVoiceStarted && rms <= localSilenceThreshold) {
+                        if (localSilenceStartedAt === null) {
+                            localSilenceStartedAt = now;
+                        } else if (!utteranceFinalizing && (now - localSilenceStartedAt) >= autoStopSilenceMs && (now - recordingStartedAt) >= 1200) {
+                            finishUtterance();
+                        }
+                    } else {
+                        localSilenceStartedAt = null;
+                    }
+                    // даунсемплим в 16000 Гц и упаковываем в PCM16
+                    const down = downsampleBuffer(input, inputSampleRate, 16000);
+                    const pcm16 = floatTo16BitPCM(down);
+                    sendPcmChunk(pcm16);
+                };
+                sourceNode.connect(processorNode);
+                processorNode.connect(audioContext.destination); // чтобы обработчик вызывался
+
+                isRecording = true;
+                localVoiceStarted = false;
+                localSilenceStartedAt = null;
+                utteranceFinalizing = false;
+                recordingStartedAt = performance.now();
+                document.getElementById('micButton').classList.add('recording');
+                document.getElementById('micButton').textContent = '🛑';
+                updateStatus('recording', 'Идет запись...');
+                updateVisualizer();
+
+                // Отправляем сигнал начала записи
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'start' }));
+                }
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Ошибка доступа к микрофону: ' + error.message);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                mediaRecorder = null;
+            }
+
+            if (audioContext) {
+                try {
+                    if (processorNode) {
+                        processorNode.disconnect();
+                        processorNode.onaudioprocess = null;
+                        processorNode = null;
+                    }
+                    if (sourceNode) {
+                        sourceNode.disconnect();
+                        sourceNode = null;
+                    }
+                } catch (e) { /* ignore */ }
+                audioContext.close();
+                audioContext = null;
+            }
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            isRecording = false;
+            localVoiceStarted = false;
+            localSilenceStartedAt = null;
+            utteranceFinalizing = false;
+            document.getElementById('micButton').classList.remove('recording');
+            document.getElementById('micButton').textContent = '🎤';
+            updateStatus('connected', 'Подключено');
+
+            // Останавливаем визуализатор
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(bar => bar.style.height = '10px');
+
+            // Отправляем сигнал остановки записи
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'stop' }));
+            }
+        }
+
+        function finishUtterance() {
+            if (!isRecording || utteranceFinalizing || !ws || ws.readyState !== WebSocket.OPEN) return;
+            utteranceFinalizing = true;
+            localVoiceStarted = false;
+            localSilenceStartedAt = null;
+            updateStatus('recording', 'Думаю...');
+            ws.send(JSON.stringify({ type: 'eou' }));
+        }
+
+        async function sendAudioChunk(audioBlob) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                    // Конвертируем Blob в ArrayBuffer, затем в Base64
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    const base64 = btoa(String.fromCharCode(...uint8Array));
+                    
+                    ws.send(JSON.stringify({
+                        type: 'audio',
+                        audio: base64
+                    }));
+                } catch (error) {
+                    console.error('Error sending audio:', error);
+                }
+            }
+        }
+
+        function sendPcmChunk(pcmBytes) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcmBytes)));
+                    ws.send(JSON.stringify({ type: 'audio_pcm', audio: base64 }));
+                } catch (e) {
+                    console.error('Error sending PCM:', e);
+                }
+            }
+        }
+
+        function floatTo16BitPCM(input) {
+            const buffer = new ArrayBuffer(input.length * 2);
+            const view = new DataView(buffer);
+            let offset = 0;
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                let s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+            return buffer;
+        }
+
+        function calculateRms(input) {
+            let sum = 0;
+            for (let i = 0; i < input.length; i++) {
+                sum += input[i] * input[i];
+            }
+            return Math.sqrt(sum / (input.length || 1));
+        }
+
+        function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+            if (outSampleRate === sampleRate) {
+                return buffer;
+            }
+            const ratio = sampleRate / outSampleRate;
+            const newLength = Math.round(buffer.length / ratio);
+            const result = new Float32Array(newLength);
+            let offsetResult = 0;
+            let offsetBuffer = 0;
+            while (offsetResult < result.length) {
+                const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+                // усредняем чтобы снизить алиасинг
+                let accum = 0, count = 0;
+                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+                result[offsetResult] = accum / (count || 1);
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+            return result;
+        }
+
+        function sendText() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (text && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'text',
+                    text: text
+                }));
+                textInput.value = '';
+            }
+        }
+
+        function handleMessage(message) {
+            switch (message.type) {
+                case 'speech_started':
+                    break;
+
+                case 'transcription':
+                    document.getElementById('transcription').style.display = 'block';
+                    document.getElementById('transcription').textContent = 
+                        'Вы сказали: ' + message.text;
+                    document.getElementById('response').textContent = '';
+                    break;
+
+                case 'partial_transcription':
+                    document.getElementById('transcription').style.display = 'block';
+                    document.getElementById('transcription').textContent = 
+                        'Слушаю: ' + message.text;
+                    break;
+
+                case 'text_delta':
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.textContent += message.text;
+                    break;
+
+                case 'audio_delta':
+                    enqueueAudio(message.audio);
+                    break;
+
+                case 'stop_audio':
+                    stopAssistantAudio();
+                    break;
+
+                case 'response_done':
+                    document.getElementById('response').textContent += '\n\n';
+                    utteranceFinalizing = false;
+                    if (isRecording) {
+                        updateStatus('recording', 'Слушаю...');
+                    }
+                    break;
+
+                case 'error':
+                    console.error('Error:', message.message);
+                    break;
+
+                case 'status':
+                    if (message.status === 'started') {
+                        updateStatus('recording', 'Идет запись...');
+                    } else if (message.status === 'listening') {
+                        utteranceFinalizing = false;
+                        if (isRecording) {
+                            updateStatus('recording', 'Слушаю...');
+                        } else {
+                            updateStatus('connected', 'Подключено');
+                        }
+                    } else {
+                        updateStatus('connected', 'Подключено');
+                    }
+                    break;
+            }
+        }
+
+        function enqueueAudio(base64Audio) {
+            audioPlaybackQueue.push(base64Audio);
+            if (!audioPlaybackBusy) {
+                playNextAudio();
+            }
+        }
+
+        async function playNextAudio() {
+            if (audioPlaybackQueue.length === 0) {
+                audioPlaybackBusy = false;
+                assistantSpeaking = false;
+                return;
+            }
+
+            audioPlaybackBusy = true;
+            const base64Audio = audioPlaybackQueue.shift();
+            try {
+                // Декодируем Base64 в ArrayBuffer
+                const binaryString = atob(base64Audio);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // Создаем AudioContext и воспроизводим
+                if (!audioContext || audioContext.state === 'closed') {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                // Убеждаемся, что контекст разблокирован пользователем
+                if (audioContext.state === 'suspended') {
+                    try { await audioContext.resume(); } catch (e) { /* ignore */ }
+                }
+
+                audioContext.decodeAudioData(bytes.buffer).then(audioBuffer => {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContext.destination);
+                    assistantSpeaking = true;
+                    activeAudioSources.push(source);
+                    source.onended = () => {
+                        activeAudioSources = activeAudioSources.filter(item => item !== source);
+                        if (activeAudioSources.length === 0) {
+                            assistantSpeaking = false;
+                        }
+                        playNextAudio();
+                    };
+                    source.start();
+                }).catch(error => {
+                    console.error('Error playing audio:', error);
+                    playNextAudio();
+                });
+            } catch (error) {
+                console.error('Error processing audio:', error);
+                playNextAudio();
+            }
+        }
+
+        function stopAssistantAudio() {
+            audioPlaybackQueue = [];
+            audioPlaybackBusy = false;
+            activeAudioSources.forEach(source => {
+                try { source.stop(); } catch (e) { /* ignore */ }
+                try { source.disconnect(); } catch (e) { /* ignore */ }
+            });
+            activeAudioSources = [];
+            assistantSpeaking = false;
+        }
+
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            initVisualizer();
+        });
+
+        // Отправка текста по Enter
+        document.getElementById('textInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendText();
+            }
+        });
+    </script>
+</body>
+</html>
+
