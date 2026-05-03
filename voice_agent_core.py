@@ -627,6 +627,8 @@ class VoiceAgentCore:
         self.response_queue: asyncio.Queue = asyncio.Queue()
         self.is_initialized = False
         self._response_lock = asyncio.Lock()
+        self._last_processed_text: str = ""
+        self._last_processed_ts: float = 0.0
         
         # Буферизация аудио для пакетной отправки в ASR
         self._audio_buffer = bytearray()
@@ -734,6 +736,18 @@ class VoiceAgentCore:
         async with self._response_lock:
             stop_words = {"стоп", "stop", "хватит", "молчи", "замолчи"}
             normalized_text = text.strip().lower().strip(" .,!?:;")
+            normalized_text = re.sub(r"\s+", " ", normalized_text)
+            now = asyncio.get_event_loop().time()
+            if (
+                normalized_text
+                and normalized_text == self._last_processed_text
+                and now - self._last_processed_ts < 8.0
+            ):
+                logger.info(f"Игнорирую повтор финального текста STT: {text[:80]}")
+                return {"type": "duplicate_ignored", "text": text}
+            self._last_processed_text = normalized_text
+            self._last_processed_ts = now
+
             if normalized_text in stop_words:
                 await self.response_queue.put({"type": "stop_audio"})
                 await self.response_queue.put({"type": "response_done"})
