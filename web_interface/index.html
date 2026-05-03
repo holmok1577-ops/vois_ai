@@ -372,6 +372,14 @@
 
         async function startRecording() {
             try {
+                const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+                if (!window.isSecureContext && !isLocalhost) {
+                    throw new Error('микрофон доступен только через HTTPS или localhost. Откройте сайт по HTTPS после выпуска сертификата.');
+                }
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('браузер не дал API микрофона. Обычно это происходит на HTTP-адресе или в браузере без поддержки записи.');
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         sampleRate: 16000,
